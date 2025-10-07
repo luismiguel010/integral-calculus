@@ -17,6 +17,7 @@ class BezierCurveApp:
         self.control_points = []
         self.animation_running = False
         self.current_t = 0.0
+        self.manual_t = 0.0
         self.t_step = 0.05
         
         # Crear interfaz
@@ -49,6 +50,28 @@ class BezierCurveApp:
                   command=self.stop_animation).pack(side=tk.LEFT, padx=5)
         ttk.Button(control_frame, text="Reset", 
                   command=self.reset_animation).pack(side=tk.LEFT, padx=5)
+        
+        # Frame para controles de t
+        t_frame = ttk.Frame(main_frame)
+        t_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+        
+        # Control manual de t
+        ttk.Label(t_frame, text="Valor de t:").pack(side=tk.LEFT, padx=5)
+        self.t_var = tk.DoubleVar(value=0.0)
+        self.t_scale = ttk.Scale(t_frame, from_=0.0, to=1.0, orient=tk.HORIZONTAL,
+                                variable=self.t_var, command=self.on_t_change)
+        self.t_scale.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        
+        # Mostrar valor actual de t
+        self.t_label = ttk.Label(t_frame, text="t = 0.00")
+        self.t_label.pack(side=tk.LEFT, padx=5)
+        
+        # Botón para modo manual
+        self.manual_mode = tk.BooleanVar(value=False)
+        self.manual_check = ttk.Checkbutton(t_frame, text="Modo Manual", 
+                                           variable=self.manual_mode,
+                                           command=self.toggle_manual_mode)
+        self.manual_check.pack(side=tk.LEFT, padx=5)
         
         # Frame para la gráfica
         self.plot_frame = ttk.Frame(main_frame)
@@ -146,13 +169,14 @@ class BezierCurveApp:
                            label='Curva de Bézier')
             
             # Animación del punto actual
-            if self.animation_running and 0 <= self.current_t <= 1:
-                current_point = self.bezier_curve(self.control_points, self.current_t)
+            display_t = self.current_t if self.animation_running else self.manual_t
+            if 0 <= display_t <= 1:
+                current_point = self.bezier_curve(self.control_points, display_t)
                 self.ax.scatter(current_point[0], current_point[1], c='green', 
-                              s=150, zorder=6, label=f't = {self.current_t:.2f}')
+                              s=150, zorder=6, label=f't = {display_t:.2f}')
                 
                 # Mostrar construcción de la curva
-                self.show_construction(self.current_t)
+                self.show_construction(display_t)
         
         self.ax.legend()
         self.canvas.draw()
@@ -238,7 +262,24 @@ class BezierCurveApp:
         """Reinicia la animación"""
         self.animation_running = False
         self.current_t = 0.0
+        self.manual_t = 0.0
+        self.t_var.set(0.0)
         self.update_plot()
+    
+    def on_t_change(self, value):
+        """Maneja el cambio del slider de t"""
+        self.manual_t = float(value)
+        self.t_label.config(text=f"t = {self.manual_t:.2f}")
+        if self.manual_mode.get():
+            self.update_plot()
+    
+    def toggle_manual_mode(self):
+        """Alterna entre modo manual y automático"""
+        if self.manual_mode.get():
+            self.stop_animation()
+            self.update_plot()
+        else:
+            self.reset_animation()
     
     def animate_curve(self):
         """Anima la curva"""
